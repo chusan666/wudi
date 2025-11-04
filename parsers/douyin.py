@@ -11,7 +11,8 @@ class DouyinParser(BaseParser):
             url = await self.get_redirect_url(url)
         
         headers = self.headers.copy()
-        headers['User-Agent'] = 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1'
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        headers['Referer'] = 'https://www.douyin.com/'
         
         import httpx
         async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
@@ -32,12 +33,23 @@ class DouyinParser(BaseParser):
                 
                 aweme_detail = None
                 if isinstance(data, dict):
+                    if 'app' in data and isinstance(data['app'], dict):
+                        if 'videoDetail' in data['app']:
+                            aweme_detail = data['app']['videoDetail']
+                        elif 'aweme' in data['app']:
+                            aweme_detail = data['app']['aweme'].get('detail')
+                    
                     for key, value in data.items():
+                        if aweme_detail:
+                            break
                         if isinstance(value, dict) and 'aweme' in value:
                             aweme_detail = value['aweme'].get('detail')
                             break
                         elif isinstance(value, dict) and 'awemeDetail' in value:
                             aweme_detail = value['awemeDetail']
+                            break
+                        elif isinstance(value, dict) and 'videoDetail' in value:
+                            aweme_detail = value['videoDetail']
                             break
                 
                 if aweme_detail:
@@ -75,20 +87,34 @@ class DouyinParser(BaseParser):
                     
                     play_addr = video_info.get('playAddr')
                     if play_addr:
-                        url_list = play_addr.get('urlList', [])
-                        if url_list:
-                            result['video_url'] = url_list[0]
+                        if isinstance(play_addr, list) and len(play_addr) > 0:
+                            if isinstance(play_addr[0], dict) and 'src' in play_addr[0]:
+                                result['video_url'] = play_addr[0]['src']
+                            elif isinstance(play_addr[0], str):
+                                result['video_url'] = play_addr[0]
+                        elif isinstance(play_addr, dict):
+                            url_list = play_addr.get('urlList', [])
+                            if url_list:
+                                result['video_url'] = url_list[0]
                     
                     bit_rate_list = video_info.get('bitRateList', [])
                     if bit_rate_list:
-                        result['video']['bitrate_urls'] = [
-                            {
-                                'bit_rate': item.get('bitRate'),
-                                'gear_name': item.get('gearName'),
-                                'url': item.get('playAddr', {}).get('urlList', [None])[0]
-                            }
-                            for item in bit_rate_list
-                        ]
+                        result['video']['bitrate_urls'] = []
+                        for item in bit_rate_list:
+                            if isinstance(item, dict):
+                                play_addr_item = item.get('playAddr')
+                                url = None
+                                if isinstance(play_addr_item, list) and len(play_addr_item) > 0:
+                                    url = play_addr_item[0].get('src') if isinstance(play_addr_item[0], dict) else play_addr_item[0]
+                                elif isinstance(play_addr_item, dict):
+                                    url_list = play_addr_item.get('urlList', [])
+                                    url = url_list[0] if url_list else None
+                                
+                                result['video']['bitrate_urls'].append({
+                                    'bit_rate': item.get('bitRate'),
+                                    'gear_name': item.get('gearName'),
+                                    'url': url
+                                })
                     
                     return result
             except Exception as e:

@@ -48,9 +48,13 @@ class XiaohongshuParser(BaseParser):
                     
                     if video_info:
                         video_consumer = video_info.get('consumer', {})
-                        video_url = video_consumer.get('originVideoKey') or video_consumer.get('videoKey')
-                        if video_url:
-                            result['video_url'] = video_url
+                        video_key = video_consumer.get('originVideoKey') or video_consumer.get('videoKey')
+                        if video_key:
+                            if video_key.startswith('http'):
+                                result['video_url'] = video_key
+                            else:
+                                result['video_url'] = f"http://sns-video-bd.xhscdn.com/stream/{video_key}"
+                                result['video_key'] = video_key
                     
                     image_list = note.get('imageList', [])
                     if image_list:
@@ -70,8 +74,11 @@ class XiaohongshuParser(BaseParser):
         video_pattern = r'"originVideoKey"\s*:\s*"([^"]+)"'
         match = re.search(video_pattern, html)
         if match:
+            video_key = match.group(1)
+            video_url = f"http://sns-video-bd.xhscdn.com/stream/{video_key}" if not video_key.startswith('http') else video_key
             return {
-                'video_url': match.group(1),
+                'video_url': video_url,
+                'video_key': video_key,
                 'title': self._extract_title(soup),
             }
         
