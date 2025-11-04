@@ -7,15 +7,48 @@ from .base import BaseParser
 
 class DouyinParser(BaseParser):
     async def parse(self, url: str) -> Optional[Dict[str, Any]]:
-        if "v.douyin.com" in url or "iesdouyin.com" in url:
-            url = await self.get_redirect_url(url)
+        video_id = None
+        
+        if "v.douyin.com" in url or "iesdouyin.com" in url or "/share/" in url:
+            redirect_url = await self.get_redirect_url(url)
+            
+            video_id_match = re.search(r'video/(\d+)', redirect_url)
+            modal_id_match = re.search(r'modal_id=(\d+)', redirect_url)
+            
+            if video_id_match:
+                video_id = video_id_match.group(1)
+            elif modal_id_match:
+                video_id = modal_id_match.group(1)
+            
+            if video_id:
+                url = f"https://www.douyin.com/jingxuan?modal_id={video_id}"
+            else:
+                url = redirect_url
         
         headers = self.headers.copy()
-        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        headers['Referer'] = 'https://www.douyin.com/'
+        headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.douyin.com/',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cache-Control': 'max-age=0',
+            'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'Sec-Ch-Ua-Mobile': '?0',
+            'Sec-Ch-Ua-Platform': '"Windows"',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Upgrade-Insecure-Requests': '1',
+        })
         
         import httpx
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+        cookies = {
+            '__ac_nonce': '0',
+            '__ac_signature': '_',
+        }
+        
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0, cookies=cookies) as client:
             response = await client.get(url, headers=headers)
             html = response.text
         
