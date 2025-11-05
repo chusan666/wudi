@@ -1,0 +1,21 @@
+{
+  "name": "kol-analytics-monorepo",
+  "version": "1.0.0",
+  "description": "KOL Analytics APIs with layered architecture",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter api dev",
+    "build": "pnpm --filter api build",
+    "test": "pnpm --filter api test",
+    "install": "pnpm install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "pnpm@8.0.0"
+}

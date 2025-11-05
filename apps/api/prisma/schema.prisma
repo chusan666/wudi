@@ -1,0 +1,192 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model KolProfile {
+  id              String   @id @default(cuid())
+  platform        String   // platform identifier (e.g., 'xiaohongshu', 'douyin', etc.)
+  platformUserId  String   @unique(map: "platform_user_unique")
+  username        String
+  displayName     String?
+  avatar          String?
+  bio             String?
+  verified        Boolean  @default(false)
+  verificationType String? // e.g., 'blue_v', 'gold_v', 'enterprise'
+  followerCount   Int      @default(0)
+  followingCount  Int      @default(0)
+  postCount       Int      @default(0)
+  categories      String[] // Array of category tags
+  certifications  Json?    // Store certification details as JSON
+  location        String?
+  website         String?
+  contactEmail    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  pricingHistory  KolPricing[]
+  campaigns       KolCampaign[]
+  audienceData    KolAudience[]
+  performanceData KolPerformance[]
+  conversionData  KolConversion[]
+  marketingIndex  KolMarketingIndex[]
+  
+  @@map("kol_profiles")
+  @@index([platform])
+  @@index([platformUserId])
+}
+
+model KolPricing {
+  id              String   @id @default(cuid())
+  kolId           String
+  serviceType     String   // e.g., 'post', 'video', 'live_stream', 'story'
+  basePrice       Decimal  @db.Decimal(10, 2)
+  currency        String   @default("CNY")
+  priceUnit       String   @default("per_post") // per_post, per_minute, per_campaign
+  minFollowers    Int?
+  maxFollowers    Int?
+  engagementRate  Decimal? @db.Decimal(5, 4)
+  validFrom       DateTime @default(now())
+  validTo         DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_pricing")
+  @@index([kolId])
+  @@index([serviceType])
+  @@index([isActive])
+}
+
+model KolCampaign {
+  id              String   @id @default(cuid())
+  kolId           String
+  campaignName    String
+  brand           String
+  campaignType    String   // e.g., 'product_launch', 'brand_awareness', 'conversion'
+  startDate       DateTime
+  endDate         DateTime
+  budget          Decimal? @db.Decimal(12, 2)
+  currency        String   @default("CNY")
+  status          String   @default("active") // active, completed, cancelled
+  deliverables    Json?    // Campaign deliverables as JSON
+  metrics         Json?    // Campaign performance metrics
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_campaigns")
+  @@index([kolId])
+  @@index([brand])
+  @@index([status])
+}
+
+model KolAudience {
+  id              String   @id @default(cuid())
+  kolId           String
+  totalFollowers  Int      @default(0)
+  genderDistribution Json?  // { "male": 45, "female": 55, "other": 0 }
+  ageDistribution Json?    // { "18-24": 25, "25-34": 40, "35-44": 25, "45+": 10 }
+  locationDistribution Json? // Top locations with percentages
+  interests       String[] // Array of interest categories
+  languages       String[] // Languages spoken by audience
+  engagementRate  Decimal  @default(0) @db.Decimal(5, 4)
+  avgSessionTime  Int?     // Average session time in seconds
+  dataFreshness   DateTime @default(now()) // When this data was last updated
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_audience")
+  @@index([kolId])
+  @@index([dataFreshness])
+}
+
+model KolPerformance {
+  id              String   @id @default(cuid())
+  kolId           String
+  contentType     String   // e.g., 'image', 'video', 'live', 'story'
+  period          String   // e.g., '7d', '30d', '90d'
+  avgViews        Int      @default(0)
+  avgLikes        Int      @default(0)
+  avgComments     Int      @default(0)
+  avgShares       Int      @default(0)
+  avgSaves        Int      @default(0)
+  engagementRate  Decimal  @default(0) @db.Decimal(5, 4)
+  reach           Int?     // Estimated unique reach
+  impressions     Int?     // Total impressions
+  videoCompletionRate Decimal? @db.Decimal(5, 4) // For video content
+  clickThroughRate Decimal? @db.Decimal(5, 4)
+  conversionRate  Decimal? @db.Decimal(5, 4)
+  dataFreshness   DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_performance")
+  @@index([kolId])
+  @@index([contentType])
+  @@index([period])
+}
+
+model KolConversion {
+  id              String   @id @default(cuid())
+  kolId           String
+  campaignId      String?
+  conversionType  String   // e.g., 'click', 'purchase', 'signup', 'download'
+  period          String   // e.g., '7d', '30d', '90d'
+  totalConversions Int     @default(0)
+  conversionRate  Decimal  @default(0) @db.Decimal(5, 4)
+  avgOrderValue   Decimal? @db.Decimal(10, 2)
+  revenue         Decimal? @db.Decimal(12, 2)
+  costPerAcquisition Decimal? @db.Decimal(10, 2)
+  returnOnAdSpend Decimal? @db.Decimal(5, 2)
+  attributionModel String  @default("last_click") // last_click, first_click, linear, time_decay
+  dataFreshness   DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_conversion")
+  @@index([kolId])
+  @@index([campaignId])
+  @@index([conversionType])
+}
+
+model KolMarketingIndex {
+  id              String   @id @default(cuid())
+  kolId           String
+  indexType       String   // e.g., 'RED', 'engagement', 'growth', 'influence'
+  indexValue      Decimal   @db.Decimal(5, 2)
+  indexRank       Int?      // Rank within category or platform
+  percentile      Decimal?  @db.Decimal(5, 2) // Percentile rank
+  trendDirection  String    @default("stable") // rising, stable, declining
+  trendChange     Decimal?  @db.Decimal(5, 2) // Change percentage
+  category        String?   // Category for comparison
+  platform        String    // Platform for comparison
+  calculationDate DateTime @default(now())
+  dataFreshness   DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  kolProfile      KolProfile @relation(fields: [kolId], references: [id], onDelete: Cascade)
+  
+  @@map("kol_marketing_index")
+  @@index([kolId])
+  @@index([indexType])
+  @@index([platform])
+}
