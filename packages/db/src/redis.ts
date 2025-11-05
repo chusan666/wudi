@@ -136,6 +136,11 @@ export class CacheHelper {
       return null;
     }
   }
+
+  // Pipeline support for complex operations
+  pipeline() {
+    return redis.pipeline();
+  }
 }
 
 export const cache = new CacheHelper('app');

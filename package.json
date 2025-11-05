@@ -16,6 +16,9 @@
     "docker:restart": "docker compose restart",
     "docker:logs": "docker compose logs -f",
     "docker:clean": "docker compose down -v",
+    "api:dev": "cd apps/api && bun run src/index.ts",
+    "api:test": "cd apps/api && bun test",
+    "api:test:watch": "cd apps/api && bun test:watch",
     "test:db": "cd apps/api && bun run src/index.ts",
     "test:redis": "cd packages/db && bun run src/test-redis-simple.ts"
   },
