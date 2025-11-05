@@ -1,9 +1,13 @@
 {
-  "name": "monorepo",
+  "name": "xiaohongshu-api",
   "version": "1.0.0",
   "private": true,
-  "description": "Monorepo with Prisma ORM and Redis caching",
+  "description": "Xiaohongshu API with Hono, Playwright crawler, Prisma ORM and Redis caching",
   "scripts": {
+    "dev": "pnpm --filter api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "install:browsers": "playwright install chromium",
     "db:migrate": "pnpm --filter @repo/db prisma migrate dev",
     "db:migrate:deploy": "pnpm --filter @repo/db prisma migrate deploy",
     "db:migrate:reset": "pnpm --filter @repo/db prisma migrate reset",

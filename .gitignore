@@ -1,12 +1,15 @@
 # Dependencies
-node_modules
+node_modules/
 .pnpm-store
+.pnp
+.pnp.js
 
 # Build outputs
-dist
-build
+dist/
+build/
 .next
 .turbo
+*.tsbuildinfo
 
 # Environment files
 .env
@@ -17,26 +20,26 @@ build
 *.db
 *.db-journal
 
+# Prisma
+prisma/migrations/**/*.sql.log
+
 # Logs
 logs
 *.log
 npm-debug.log*
 pnpm-debug.log*
 
+# Test coverage
+coverage/
+.nyc_output
+
 # OS
 .DS_Store
 Thumbs.db
 
 # IDE
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
-
-# Prisma
-prisma/migrations/**/*.sql.log
-
-# Test coverage
-coverage
-.nyc_output
