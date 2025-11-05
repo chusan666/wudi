@@ -7,19 +7,29 @@ export interface NoteDetail {
   title: string;
   content: string;
   author: {
-    userId: string;
+    id: string;
+    userId?: string;
     username: string;
+    name?: string;
     avatar?: string;
   };
   stats: {
+    views?: number;
     likes: number;
     comments: number;
     shares: number;
     collects: number;
   };
-  images: string[];
+  images?: string[];
+  media?: Array<{
+    url: string;
+    type: string;
+    width?: number;
+    height?: number;
+  }>;
   tags: string[];
-  createdAt: string;
+  createdAt?: string;
+  publishedAt?: string;
 }
 
 export interface SearchResult {
@@ -37,6 +47,13 @@ export interface SearchResult {
 export class XiaohongshuCrawler extends CrawlerService {
   constructor(options: CrawlerServiceOptions = {}) {
     super(options);
+  }
+
+  /**
+   * Crawl a note by ID - alias for fetchNoteDetail for backward compatibility
+   */
+  async crawlNote(noteId: string): Promise<CrawlResult<NoteDetail>> {
+    return this.fetchNoteDetail(noteId);
   }
 
   async fetchNoteDetail(noteId: string): Promise<CrawlResult<NoteDetail>> {

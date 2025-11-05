@@ -45,8 +45,19 @@ export async function disconnectDatabase() {
 export async function healthCheck() {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return { status: 'healthy', timestamp: new Date() };
+    const userCount = await prisma.user.count();
+    const noteCount = await prisma.note.count();
+    return { 
+      healthy: true, 
+      userCount, 
+      noteCount, 
+      timestamp: new Date() 
+    };
   } catch (error) {
-    return { status: 'unhealthy', error: String(error), timestamp: new Date() };
+    return { 
+      healthy: false, 
+      error: String(error), 
+      timestamp: new Date() 
+    };
   }
 }
