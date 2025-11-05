@@ -5,6 +5,9 @@ import { env } from '@/config/env';
 import { CommentsQueryParams, CommentResponse } from '@/types';
 import { NotFoundError } from '@/utils/errors';
 import { differenceInSeconds, addSeconds } from 'date-fns';
+import { cacheService } from '@/data-access/cache';
+import { crawlerCircuitBreaker } from '@/middleware/circuit-breaker';
+import { queueService, QUEUES, QueueJobData, QueueJobResult } from './queue.service';
 
 export class CommentService {
   private crawler: CommentCrawler;
@@ -39,6 +42,15 @@ export class CommentService {
       refresh = false,
     } = queryParams;
 
+    // Create cache key based on query parameters
+    const cacheKey = `comments:${noteId}:${JSON.stringify({
+      page,
+      pageSize,
+      order,
+      minLikes,
+      hasReplies,
+    })}`;
+
     // Check if note exists
     const note = await prisma.note.findUnique({
       where: { id: noteId },
@@ -48,74 +60,106 @@ export class CommentService {
       throw new NotFoundError(`Note with id ${noteId} not found`);
     }
 
-    // Check if we need to refresh data
-    const shouldRefresh = refresh || await this.shouldRefreshComments(noteId);
-    let cacheHit = true;
+    // Use cache with background refresh
+    const fetcher = async () => {
+      // Check if we need to refresh data
+      const shouldRefresh = refresh || await this.shouldRefreshComments(noteId);
+      
+      if (shouldRefresh) {
+        logger.info({
+          noteId,
+          reason: refresh ? 'forced_refresh' : 'stale_data',
+          message: 'Refreshing comments from external source',
+        });
 
-    if (shouldRefresh) {
-      logger.info({
-        noteId,
-        reason: refresh ? 'forced_refresh' : 'stale_data',
-        message: 'Refreshing comments from external source',
-      });
-
-      await this.refreshCommentsFromSource(noteId);
-      cacheHit = false;
-    }
-
-    // Build where clause for filters
-    const whereClause: any = {
-      noteId,
-      parentId: null, // Only top-level comments
-    };
-
-    if (minLikes !== undefined) {
-      whereClause.likeCount = { gte: minLikes };
-    }
-
-    if (hasReplies !== undefined) {
-      if (hasReplies) {
-        whereClause.replies = { some: {} };
-      } else {
-        whereClause.replies = { none: {} };
+        await this.refreshCommentsFromSource(noteId);
       }
-    }
 
-    // Get total count for pagination
-    const total = await prisma.comment.count({ where: whereClause });
+      // Build where clause for filters
+      const whereClause: any = {
+        noteId,
+        parentId: null, // Only top-level comments
+      };
 
-    // Get paginated top-level comments
-    const comments = await prisma.comment.findMany({
-      where: whereClause,
-      orderBy: { createdAt: order },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      include: {
-        replies: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            replies: {
-              orderBy: { createdAt: 'asc' },
+      if (minLikes !== undefined) {
+        whereClause.likeCount = { gte: minLikes };
+      }
+
+      if (hasReplies !== undefined) {
+        if (hasReplies) {
+          whereClause.replies = { some: {} };
+        } else {
+          whereClause.replies = { none: {} };
+        }
+      }
+
+      // Get total count for pagination
+      const total = await prisma.comment.count({ where: whereClause });
+
+      // Get paginated top-level comments
+      const comments = await prisma.comment.findMany({
+        where: whereClause,
+        orderBy: { createdAt: order },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          replies: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              replies: {
+                orderBy: { createdAt: 'asc' },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    // Serialize comments with nested replies
-    const serializedComments = await this.serializeCommentsWithReplies(comments);
+      // Serialize comments with nested replies
+      const serializedComments = await this.serializeCommentsWithReplies(comments);
+
+      return {
+        comments: serializedComments,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+        metadata: {
+          fetchedAt: new Date().toISOString(),
+          noteId,
+          cacheHit: false,
+        },
+      };
+    };
+
+    // Get data from cache with background refresh
+    const cacheResult = await cacheService.get(cacheKey);
+    let cacheHit = cacheResult.hit;
+
+    let result;
+    if (cacheResult.data && !refresh) {
+      result = cacheResult.data;
+      
+      // Schedule background refresh if data is stale
+      if (cacheResult.stale) {
+        this.scheduleBackgroundRefresh(noteId, cacheKey);
+      }
+    } else {
+      result = await fetcher();
+      await cacheService.set(cacheKey, result, {
+        ttl: env.COMMENTS_CACHE_TTL,
+        staleWhileRevalidate: env.CACHE_STALE_WHILE_REVALIDATE_TTL,
+        tags: [`note:${noteId}`, 'comments'],
+      });
+    }
 
     return {
-      comments: serializedComments,
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages: Math.ceil(total / pageSize),
-      },
+      comments: result.comments,
+      pagination: result.pagination,
       metadata: {
-        fetchedAt: new Date().toISOString(),
-        noteId,
+        fetchedAt: result.metadata.fetchedAt,
+        noteId: result.metadata.noteId,
         cacheHit,
       },
     };
@@ -140,7 +184,10 @@ export class CommentService {
 
   private async refreshCommentsFromSource(noteId: string): Promise<void> {
     try {
-      const crawlerResponse = await this.crawler.fetchComments(noteId);
+      // Use circuit breaker for crawler operations
+      const crawlerResponse = await crawlerCircuitBreaker.execute(async () => {
+        return this.crawler.fetchComments(noteId);
+      });
       
       if (crawlerResponse.comments.length === 0) {
         logger.info({
@@ -170,14 +217,14 @@ export class CommentService {
 
   private async saveRawComments(noteId: string, rawComments: RawComment[]): Promise<void> {
     // Process comments in a transaction to ensure data consistency
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       // Create a map for quick lookup of existing comments
       const existingComments = await tx.comment.findMany({
         where: { noteId },
         select: { id: true },
       });
       
-      const existingIds = new Set(existingComments.map(c => c.id));
+      const existingIds = new Set<string>(existingComments.map((c: any) => c.id));
 
       // Group comments by parent-child relationships
       const topLevelComments: RawComment[] = [];
@@ -300,5 +347,85 @@ export class CommentService {
     }
 
     return serialized;
+  }
+
+  /**
+   * Schedule background refresh for comments
+   */
+  private async scheduleBackgroundRefresh(noteId: string, cacheKey: string): Promise<void> {
+    try {
+      const jobData: QueueJobData = {
+        type: 'refresh-comments',
+        payload: {
+          noteId,
+          cacheKey,
+        },
+        timestamp: Date.now(),
+      };
+
+      await queueService.addJob(QUEUES.CACHE_REFRESH, jobData);
+      
+      logger.debug({
+        noteId,
+        cacheKey,
+        message: 'Background refresh scheduled',
+      });
+    } catch (error) {
+      logger.error({
+        noteId,
+        cacheKey,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to schedule background refresh',
+      });
+    }
+  }
+
+  /**
+   * Process background refresh jobs
+   */
+  async processBackgroundRefreshJob(jobData: QueueJobData): Promise<QueueJobResult> {
+    const startTime = Date.now();
+    
+    try {
+      const { noteId, cacheKey } = jobData.payload;
+      
+      logger.info({
+        noteId,
+        cacheKey,
+        jobId: jobData.timestamp,
+        message: 'Processing background refresh job',
+      });
+
+      // Refresh comments
+      await this.refreshCommentsFromSource(noteId);
+      
+      // Invalidate related cache entries
+      await cacheService.invalidateByTag(`note:${noteId}`);
+      
+      logger.info({
+        noteId,
+        cacheKey,
+        duration: Date.now() - startTime,
+        message: 'Background refresh job completed',
+      });
+
+      return {
+        success: true,
+        duration: Date.now() - startTime,
+      };
+    } catch (error) {
+      logger.error({
+        error: error instanceof Error ? error.message : 'Unknown error',
+        jobData,
+        duration: Date.now() - startTime,
+        message: 'Background refresh job failed',
+      });
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime,
+      };
+    }
   }
 }

@@ -1,15 +1,24 @@
 # Note Comments API
 
-A RESTful API for managing and retrieving comments for notes with nested replies, caching, and analytics-friendly metadata.
+A high-performance RESTful API for managing and retrieving comments for notes with nested replies, advanced caching, and comprehensive resilience features.
 
 ## Features
 
+### Core Functionality
 - **Nested Comments**: Support for multi-level comment replies
 - **Pagination**: Efficient pagination through large comment threads
 - **Filtering**: Filter comments by likes, replies presence, and more
-- **Caching**: Intelligent caching with TTL and forced refresh support
 - **Analytics**: Built-in sentiment analysis and fetch metadata
 - **Type-safe**: Full TypeScript support with Zod validation
+
+### Performance & Resilience
+- **Redis Caching**: Advanced caching with stale-while-revalidate pattern
+- **Background Refresh**: Automatic cache refresh via job queues
+- **Rate Limiting**: Multi-tier rate limiting with IP and user-based controls
+- **Circuit Breakers**: Fault tolerance with automatic recovery
+- **Connection Pooling**: Optimized database and Redis connections
+- **Observability**: OpenTelemetry metrics and distributed tracing
+- **Graceful Shutdown**: Safe service termination with resource cleanup
 
 ## API Endpoints
 
@@ -260,6 +269,91 @@ CREATE TABLE comments (
   FOREIGN KEY (parent_id) REFERENCES comments(id)
 );
 ```
+
+## Performance & Monitoring
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
+```
+
+Returns comprehensive health status including:
+- Database connectivity
+- Redis connectivity  
+- Queue status
+- Circuit breaker states
+- Memory usage
+
+### Metrics
+
+```bash
+curl http://localhost:3000/metrics
+```
+
+Prometheus-compatible metrics endpoint with:
+- HTTP request metrics
+- Cache performance
+- Database query performance
+- Queue statistics
+
+### Performance Testing
+
+```bash
+# Run performance benchmarks
+node scripts/performance-test.js
+
+# Run k6 load tests
+k6 run scripts/k6-test.js
+```
+
+### Rate Limiting
+
+All endpoints are rate-limited by default:
+- **Standard**: 100 requests per 15 minutes per IP
+- **Crawler endpoints**: 10 requests per 15 minutes
+
+Rate limit headers are included in responses:
+- `X-RateLimit-Limit`: Maximum requests per window
+- `X-RateLimit-Remaining`: Remaining requests
+- `X-RateLimit-Reset`: Window reset time
+
+### Caching
+
+The API uses Redis for intelligent caching:
+- **TTL**: 5 minutes for fresh data
+- **Stale-While-Revalidate**: 10 minutes additional for background refresh
+- **Cache Invalidation**: Tag-based invalidation for consistency
+
+## Configuration
+
+See `.env.example` for all configuration options. Key performance settings:
+
+```bash
+# Redis
+REDIS_URL=redis://localhost:6379
+
+# Cache TTL (seconds)
+COMMENTS_CACHE_TTL=300
+CACHE_STALE_WHILE_REVALIDATE_TTL=600
+
+# Rate Limiting
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=900000
+
+# Circuit Breakers
+CIRCUIT_BREAKER_TIMEOUT=30000
+CIRCUIT_BREAKER_ERROR_THRESHOLD=5
+
+# Database Pooling
+PRISMA_CONNECTION_POOL_SIZE=10
+PRISMA_QUERY_TIMEOUT=30000
+```
+
+## Documentation
+
+- **[Performance Guide](docs/PERFORMANCE.md)**: Comprehensive performance and resilience documentation
+- **[Grafana Dashboard](docs/grafana-dashboard.json)**: Pre-built monitoring dashboard
 
 ## Future Enhancements
 

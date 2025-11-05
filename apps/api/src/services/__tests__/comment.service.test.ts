@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, beforeAll, afterAll, vi } from 'vitest';
 import { CommentService } from '../comment.service';
 import { NoteService } from '../note.service';
+import { prisma } from '@/data-access/prisma';
 import { env } from '@/config/env';
 import { testPrisma } from '../../__tests__/setup';
 

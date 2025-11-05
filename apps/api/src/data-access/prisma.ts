@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from '@/config/logger';
+import { env } from '@/config/env';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -26,6 +27,28 @@ export const prisma =
         level: 'warn',
       },
     ],
+    // Performance optimizations
+    datasources: {
+      db: {
+        url: env.DATABASE_URL,
+      },
+    },
+    // Connection pooling configuration
+    __internal: {
+      engine: {
+        // Enable connection pooling
+        connectionLimit: env.PRISMA_CONNECTION_POOL_SIZE,
+        // Query timeout
+        queryTimeout: env.PRISMA_QUERY_TIMEOUT,
+        // Binary cache for better performance
+        binaryTargets: ['native'],
+      },
+    },
+    // Enable query batching
+    transactionOptions: {
+      timeout: env.PRISMA_QUERY_TIMEOUT,
+      maxWait: 5000, // Maximum time to wait for a connection
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {
@@ -78,3 +101,32 @@ type PrismaLogEvent = {
     type: 'prisma-warn',
   });
 });
+
+// Health check function
+export async function checkPrismaHealth(): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    logger.error({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Prisma health check failed',
+    });
+    return false;
+  }
+}
+
+// Graceful shutdown function
+export async function closePrismaConnection(): Promise<void> {
+  try {
+    await prisma.$disconnect();
+    logger.info({
+      message: 'Prisma connection closed gracefully',
+    });
+  } catch (error) {
+    logger.error({
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Error closing Prisma connection',
+    });
+  }
+}
