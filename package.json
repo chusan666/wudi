@@ -1,0 +1,19 @@
+{
+  "name": "xiaohongshu-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Xiaohongshu API with Playwright crawler",
+  "scripts": {
+    "dev": "pnpm --filter api dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "install:browsers": "playwright install chromium"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18",
+    "pnpm": ">=8"
+  }
+}
