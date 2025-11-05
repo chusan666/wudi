@@ -7,6 +7,7 @@ import { errorResponse } from '@/utils/response.js';
 import { AppError, ValidationError, NotFoundError } from '@/types/errors.js';
 import healthRoute from '@/routes/health.route.js';
 import noteRoute from '@/routes/note.route.js';
+import userRoute from '@/routes/user.route.js';
 
 export function createApp() {
   const app = new Hono();
@@ -19,6 +20,7 @@ export function createApp() {
   // Routes
   app.route('/health', healthRoute);
   app.route('/api/notes', noteRoute);
+  app.route('/api/users', userRoute);
 
   // Root endpoint
   app.get('/', (c) => {
@@ -28,6 +30,8 @@ export function createApp() {
       endpoints: {
         health: '/health',
         notes: '/api/notes/:id',
+        users: '/api/users/:id',
+        userNotes: '/api/users/:id/notes',
       },
     });
   });

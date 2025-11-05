@@ -135,7 +135,7 @@ export async function createQueryLog(data: {
   await prisma.queryLog.create({
     data: {
       query: data.query,
-      params: data.params || null,
+      params: data.params as any,
       duration: data.duration,
       userId: data.userId,
       ipAddress: data.ipAddress,

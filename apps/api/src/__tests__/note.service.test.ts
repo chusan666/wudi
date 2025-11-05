@@ -22,7 +22,7 @@ describe('Note Service', () => {
     it('should handle note not found in database', async () => {
       // Mock crawler to fail
       const originalCrawl = crawlerDataAccess.crawlNote;
-      crawlerDataAccess.crawlNote = mock(async () => {
+      (crawlerDataAccess as any).crawlNote = mock(async () => {
         throw new Error('Note not found on Xiaohongshu');
       });
 
@@ -32,7 +32,7 @@ describe('Note Service', () => {
       } catch (error: any) {
         expect(error.name).toBe('NotFoundError');
       } finally {
-        crawlerDataAccess.crawlNote = originalCrawl;
+        (crawlerDataAccess as any).crawlNote = originalCrawl;
       }
     });
 
@@ -57,7 +57,7 @@ describe('Note Service', () => {
       };
 
       const originalCrawl = crawlerDataAccess.crawlNote;
-      crawlerDataAccess.crawlNote = mock(async () => mockCrawledData);
+      (crawlerDataAccess as any).crawlNote = mock(async () => mockCrawledData);
 
       try {
         const result = await noteService.getNote('test-note-123', { skipCache: true });
@@ -70,7 +70,7 @@ describe('Note Service', () => {
         expect(result.media).toHaveLength(1);
         expect(result.tags).toContain('test');
       } finally {
-        crawlerDataAccess.crawlNote = originalCrawl;
+        (crawlerDataAccess as any).crawlNote = originalCrawl;
       }
     });
   });

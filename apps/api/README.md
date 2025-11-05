@@ -6,6 +6,8 @@ A production-ready Hono-based API service for aggregating Xiaohongshu note data 
 
 - ✅ **Layered Architecture** - Clean separation of routes, controllers, services, and data access
 - ✅ **Note Detail API** - Comprehensive endpoint with author, statistics, media, and tags
+- ✅ **User Profile API** - User detail endpoint with statistics and certifications
+- ✅ **User Notes API** - Paginated user notes with sorting options
 - ✅ **Redis Caching** - Intelligent caching with stale-while-revalidate strategy
 - ✅ **Playwright Crawler** - Automated data fetching from Xiaohongshu
 - ✅ **Database Persistence** - PostgreSQL storage via Prisma ORM
@@ -40,20 +42,25 @@ src/
 │   └── logger.ts
 ├── routes/              # Route definitions
 │   ├── health.route.ts
-│   └── note.route.ts
+│   ├── note.route.ts
+│   └── user.route.ts
 ├── controllers/         # Request handlers
-│   └── note.controller.ts
+│   ├── note.controller.ts
+│   └── user.controller.ts
 ├── services/            # Business logic
-│   └── note.service.ts
+│   ├── note.service.ts
+│   └── user.service.ts
 ├── data-access/         # Data layer
 │   ├── note.data-access.ts
+│   ├── user.data-access.ts
 │   └── crawler.data-access.ts
 ├── utils/               # Helper functions
 │   └── response.ts
 ├── types/               # TypeScript types
 │   ├── api.ts
 │   ├── errors.ts
-│   └── note.ts
+│   ├── note.ts
+│   └── user.ts
 ├── app.ts               # Hono app configuration
 └── index.ts             # Server entry point
 ```
@@ -130,35 +137,38 @@ Returns comprehensive note information:
 curl http://localhost:3000/api/notes/cmhlhzn020004g8dkwqyb0307
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "cmhlhzn020004g8dkwqyb0307",
-    "title": "Getting Started with Prisma",
-    "content": "...",
-    "author": {
-      "id": "cmhlhzmw30000g8dkku9kgbrt",
-      "username": "alice",
-      "name": "Alice Johnson"
-    },
-    "statistics": {
-      "viewCount": 1250,
-      "likeCount": 87,
-      "shareCount": 23,
-      "commentCount": 12
-    },
-    "media": [...],
-    "tags": ["prisma", "database", "orm"]
-  },
-  "meta": {
-    "requestId": "req_abc123",
-    "timestamp": "2024-11-05T12:00:00.000Z",
-    "duration": 15
-  }
-}
+### Get User Profile
+```bash
+GET /api/users/:id
 ```
+
+Returns comprehensive user profile:
+- Basic profile (username, name, avatar, bio)
+- Statistics (followers, following, notes, likes, collects)
+- Certifications and location info
+
+**Example:**
+```bash
+curl http://localhost:3000/api/users/cmhlhzmw30000g8dkku9kgbrt
+```
+
+### Get User Notes
+```bash
+GET /api/users/:id/notes?page=1&pageSize=20&sort=latest
+```
+
+Returns paginated list of user's notes with:
+- Note summaries (title, cover, stats)
+- Pagination metadata (total, pages, next cursor)
+- Sorting options (latest, popular, oldest)
+
+**Example:**
+```bash
+curl "http://localhost:3000/api/users/cmhlhzmw30000g8dkku9kgbrt/notes?page=1&pageSize=20&sort=latest"
+```
+
+**Response Format:**
+See [API Documentation](./API_DOCUMENTATION.md) for detailed response schemas.
 
 ## Environment Variables
 
@@ -208,9 +218,11 @@ Request → Check Redis
 # Run tests
 bun test
 
-# Test specific endpoint
+# Test specific endpoints
 curl http://localhost:3000/health
 curl http://localhost:3000/api/notes/{note-id}
+curl http://localhost:3000/api/users/{user-id}
+curl "http://localhost:3000/api/users/{user-id}/notes?page=1&pageSize=20&sort=latest"
 ```
 
 ## Query Logging

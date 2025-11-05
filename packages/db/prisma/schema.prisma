@@ -19,15 +19,35 @@ model User {
   name      String?
   avatar    String?
   bio       String?
+  metadata  Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  notes    Note[]
-  comments Comment[]
+  notes      Note[]
+  comments   Comment[]
+  statistics UserStatistics?
 
   @@index([email])
   @@index([username])
   @@map("users")
+}
+
+model UserStatistics {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  followerCount  Int      @default(0)
+  followingCount Int      @default(0)
+  noteCount      Int      @default(0)
+  likeCount      Int      @default(0)
+  collectCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([followerCount])
+  @@index([noteCount])
+  @@map("user_statistics")
 }
 
 model Note {

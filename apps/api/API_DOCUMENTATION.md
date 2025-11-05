@@ -145,9 +145,166 @@ curl http://localhost:3000/api/notes/note_123
 
 ---
 
+### Get User Profile
+
+#### GET /api/users/:id
+
+Returns comprehensive user profile information including basic profile data, statistics, certifications, and location information.
+
+**Features:**
+- Redis caching with configurable TTL
+- Stale-while-revalidate strategy for optimal performance
+- Automatic fallback to database on crawler failure
+- Query logging with execution timing
+- Automatic data normalization and persistence
+
+**Path Parameters**
+
+| Parameter | Type   | Required | Description           |
+|-----------|--------|----------|-----------------------|
+| id        | string | Yes      | The unique user ID    |
+
+**Request Example**
+```bash
+curl http://localhost:3000/api/users/user_123
+```
+
+**Response Example**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_123",
+    "username": "photo_enthusiast",
+    "name": "Jane Doe",
+    "avatar": "https://example.com/avatars/user_123.jpg",
+    "bio": "Professional photographer | Travel lover | Sharing my journey",
+    "statistics": {
+      "followerCount": 15234,
+      "followingCount": 892,
+      "noteCount": 145,
+      "likeCount": 50234,
+      "collectCount": 8921
+    },
+    "certifications": ["Verified Creator", "Photography Expert"],
+    "location": "San Francisco, CA",
+    "ipLocation": "United States",
+    "gender": "female",
+    "createdAt": "2023-01-15T08:25:00.000Z",
+    "updatedAt": "2024-11-05T12:00:00.000Z"
+  },
+  "meta": {
+    "requestId": "req_xyz789",
+    "timestamp": "2024-11-05T12:00:00.000Z",
+    "duration": 120
+  }
+}
+```
+
+**Status Codes**
+- `200` - Success
+- `400` - Invalid user ID format
+- `404` - User not found
+- `500` - Internal server error (crawler failure, database error, etc.)
+
+---
+
+### Get User Notes
+
+#### GET /api/users/:id/notes
+
+Returns a paginated list of notes published by a specific user with support for different sorting options.
+
+**Features:**
+- Pagination with configurable page size
+- Multiple sort options (latest, popular, oldest)
+- Redis caching per page/sort combination
+- Automatic user profile fetching if not cached
+- Query logging with execution timing
+
+**Path Parameters**
+
+| Parameter | Type   | Required | Description           |
+|-----------|--------|----------|-----------------------|
+| id        | string | Yes      | The unique user ID    |
+
+**Query Parameters**
+
+| Parameter | Type   | Required | Default | Description                                    |
+|-----------|--------|----------|---------|------------------------------------------------|
+| page      | number | No       | 1       | Page number (1-indexed)                        |
+| pageSize  | number | No       | 20      | Items per page (max: 100)                      |
+| sort      | string | No       | latest  | Sort order: 'latest', 'popular', or 'oldest'   |
+
+**Request Example**
+```bash
+curl "http://localhost:3000/api/users/user_123/notes?page=1&pageSize=20&sort=latest"
+```
+
+**Response Example**
+```json
+{
+  "success": true,
+  "data": {
+    "notes": [
+      {
+        "id": "note_456",
+        "title": "Beautiful Sunset Photography Tips",
+        "slug": "beautiful-sunset-photography-tips-note_456",
+        "coverImage": "https://example.com/covers/note_456.jpg",
+        "likeCount": 892,
+        "viewCount": 15234,
+        "commentCount": 67,
+        "tags": ["photography", "sunset", "tips"],
+        "publishedAt": "2024-01-15T08:30:00.000Z",
+        "createdAt": "2024-01-15T08:25:00.000Z"
+      },
+      {
+        "id": "note_789",
+        "title": "My Travel Photography Gear 2024",
+        "slug": "my-travel-photography-gear-2024-note_789",
+        "coverImage": "https://example.com/covers/note_789.jpg",
+        "likeCount": 1245,
+        "viewCount": 23456,
+        "commentCount": 89,
+        "tags": ["photography", "gear", "travel"],
+        "publishedAt": "2024-01-10T10:15:00.000Z",
+        "createdAt": "2024-01-10T10:10:00.000Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "pageSize": 20,
+      "total": 145,
+      "totalPages": 8,
+      "hasMore": true,
+      "nextCursor": "2"
+    }
+  },
+  "meta": {
+    "requestId": "req_abc456",
+    "timestamp": "2024-11-05T12:00:00.000Z",
+    "duration": 85
+  }
+}
+```
+
+**Status Codes**
+- `200` - Success
+- `400` - Invalid parameters (user ID, page, pageSize, sort)
+- `404` - User not found
+- `500` - Internal server error (database error)
+
+**Sort Options**
+- `latest`: Sort by publish date (newest first)
+- `popular`: Sort by like count (most popular first)
+- `oldest`: Sort by publish date (oldest first)
+
+---
+
 ## Caching Strategy
 
-The Note Detail API implements an intelligent caching strategy:
+Both Note and User APIs implement an intelligent caching strategy:
 
 ### Cache Layers
 1. **Redis Cache** (Primary) - TTL: 1 hour
@@ -265,9 +422,11 @@ pnpm dev
 # Run all tests
 pnpm test
 
-# Test specific endpoint
+# Test specific endpoints
 curl http://localhost:3000/health
 curl http://localhost:3000/api/notes/{note-id}
+curl http://localhost:3000/api/users/{user-id}
+curl "http://localhost:3000/api/users/{user-id}/notes?page=1&pageSize=20&sort=latest"
 ```
 
 ### Environment Variables
