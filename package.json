@@ -1,0 +1,17 @@
+{
+  "name": "note-comments-api",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter api dev",
+    "test": "pnpm --filter api test",
+    "build": "pnpm --filter api build"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
