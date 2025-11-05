@@ -1,6 +1,12 @@
 # 视频链接解析API
 
-这是一个用于提取小红书、抖音、B站、快手等社交媒体平台视频地址的API工具。
+这是一个用于提取小红书、抖音、B站、快手等社交媒体平台视频地址的全栈应用，包含后端API和前端界面。
+
+## 项目概览
+
+- **后端API**: FastAPI服务，提供社交媒体内容解析功能
+- **前端界面**: Next.js应用，提供用户友好的界面查看详细内容
+- **支持平台**: 小红书、抖音、B站、快手
 
 ## 支持的平台
 
@@ -9,14 +15,58 @@
 - 📺 **B站** (Bilibili) - bilibili.com, b23.tv
 - ⚡ **快手** (Kuaishou) - kuaishou.com, ksurl.cn
 
+## 快速开始
+
+### 1. 启动后端服务
+
+```bash
+# 安装后端依赖
+pip install -r requirements.txt
+
+# 启动API服务
+python main.py
+```
+
+后端服务将在 `http://localhost:8000` 启动
+
+### 2. 启动前端应用
+
+```bash
+# 进入前端目录
+cd frontend
+
+# 安装前端依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+前端应用将在 `http://localhost:3000` 启动
+
+### 3. 访问应用
+
+- **前端界面**: http://localhost:3000
+- **API文档**: http://localhost:8000/docs
+- **API健康检查**: http://localhost:8000/health
+
 ## 功能特性
 
+### 后端API
 - ✅ 自动识别平台类型
 - ✅ 提取视频直链地址
 - ✅ 获取视频元信息（标题、作者、统计数据等）
 - ✅ 处理短链接重定向
 - ✅ RESTful API 接口
 - ✅ 跨域支持 (CORS)
+
+### 前端界面
+- ✅ 现代化响应式设计
+- ✅ 详细内容展示页面
+- ✅ 用户资料和统计信息
+- ✅ 交互式图表和数据可视化
+- ✅ 智能缓存和数据管理
+- ✅ 移动端适配
 
 ## 安装
 
@@ -30,35 +80,32 @@ cd <project-directory>
 ### 2. 安装依赖
 
 ```bash
+# 安装后端依赖
 pip install -r requirements.txt
+
+# 安装前端依赖
+cd frontend
+npm install
+cd ..
 ```
 
 ## 使用方法
 
-### 启动服务
+### 前端界面
 
-```bash
-python main.py
-```
+1. 启动前端应用：`cd frontend && npm run dev`
+2. 访问 http://localhost:3000
+3. 使用界面功能：
+   - **首页**: 查看应用概览和快速导航
+   - **解析页面**: 输入社交媒体URL进行解析
+   - **笔记详情**: `/notes/[id]` - 查看笔记详细信息和统计数据
+   - **用户资料**: `/users/[id]` - 查看用户资料和内容列表
 
-或使用 uvicorn:
+### API 接口
 
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-```
+后端API在 `http://localhost:8000` 提供以下接口：
 
-服务将在 `http://localhost:8000` 启动
-
-### API 文档
-
-启动服务后，访问以下地址查看自动生成的API文档：
-
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-
-## API 接口
-
-### 1. 解析视频链接
+#### 1. 解析视频链接
 
 **接口:** `POST /parse`
 
@@ -221,6 +268,13 @@ fetch('http://localhost:8000/parse', {
 ├── main.py                 # FastAPI 主应用
 ├── requirements.txt        # 项目依赖
 ├── README.md              # 项目文档
+├── frontend/              # Next.js 前端应用
+│   ├── app/              # 页面路由
+│   ├── components/       # React 组件
+│   ├── hooks/           # 自定义 Hooks
+│   ├── lib/             # 工具函数和 API 客户端
+│   ├── package.json     # 前端依赖
+│   └── README.md        # 前端文档
 ├── parsers/               # 解析器模块
 │   ├── __init__.py
 │   ├── base.py           # 基础解析器类
@@ -241,10 +295,20 @@ fetch('http://localhost:8000/parse', {
 
 ## 技术栈
 
+### 后端
 - **FastAPI**: 现代、快速的Web框架
 - **httpx**: 异步HTTP客户端
 - **BeautifulSoup4**: HTML解析库
 - **Pydantic**: 数据验证和设置管理
+
+### 前端
+- **Next.js 14**: React全栈框架
+- **TypeScript**: 类型安全的JavaScript
+- **Tailwind CSS**: 实用优先的CSS框架
+- **shadcn/ui**: 现代化组件库
+- **TanStack Query**: 数据获取和状态管理
+- **Recharts**: 数据可视化图表库
+- **Jest**: JavaScript测试框架
 
 ## 开发路线图
 
