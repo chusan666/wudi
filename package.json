@@ -21,7 +21,13 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md,yml,yaml}\"",
     "type-check": "pnpm --recursive --filter \"./apps/*\" --filter \"./packages/*\" type-check",
     "test": "pnpm --recursive --filter \"./apps/*\" --filter \"./packages/*\" test",
-    "clean": "pnpm --recursive --filter \"./apps/*\" --filter \"./packages/*\" clean && rm -rf node_modules"
+    "clean": "pnpm --recursive --filter \"./apps/*\" --filter \"./packages/*\" clean && rm -rf node_modules",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:test": "docker compose -f docker-compose.test.yml up --build --abort-on-container-exit",
+    "docker:clean": "docker compose down -v --rmi all"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -1,35 +1,30 @@
 # syntax=docker/dockerfile:1
 
 FROM node:20-alpine AS base
-
-# Install dependencies
-FROM base AS deps
-RUN corepack enable pnpm
 WORKDIR /app
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Install dependencies using host node_modules
+FROM base AS deps
+COPY --from=host node_modules ./node_modules
+COPY package.json pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
-COPY packages/shared/package.json ./packages/shared/
-RUN pnpm install --frozen-lockfile --filter web --filter @monorepo/shared
+COPY packages/shared ./packages/shared
 
 # Build shared package
 FROM base AS build-shared
-RUN corepack enable pnpm
-WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY packages/shared ./packages/shared
 WORKDIR /app/packages/shared
-RUN pnpm run build
+RUN npm run build
 
 # Build Next.js app
 FROM base AS builder
-RUN corepack enable pnpm
-WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build-shared /app/packages/shared/dist ./packages/shared/dist
 COPY apps/web ./apps/web
 WORKDIR /app/apps/web
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm run build
+RUN npm run build
 
 # Production image
 FROM base AS runner

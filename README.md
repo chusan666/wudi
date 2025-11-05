@@ -260,55 +260,70 @@ cd packages/new-package
 pnpm install
 ```
 
-## 🐳 Docker Support
+## 🐳 Docker Deployment
 
-Docker configuration can be added for containerized deployments. Each app can have its own Dockerfile:
+This project includes a comprehensive Docker deployment stack with support for:
 
-### Example Dockerfile for API:
+- **Multi-stage builds** with caching and optimization
+- **Playwright integration** for browser automation
+- **Production-ready** configuration with security best practices
+- **Health checks** and monitoring
+- **Environment templates** for staging and production
+- **CI/CD pipeline** with GitHub Actions
+- **Kubernetes manifests** for cloud deployment
 
-```dockerfile
-FROM oven/bun:1 as base
-WORKDIR /app
+### Quick Docker Start
 
-FROM base as install
-COPY package.json pnpm-lock.yaml ./
-RUN bun install --frozen-lockfile
+```bash
+# Start all services with Docker
+make up
 
-FROM base as build
-COPY --from=install /app/node_modules ./node_modules
-COPY . .
-RUN bun run build
-
-FROM base as release
-COPY --from=build /app/dist ./dist
-EXPOSE 3001
-CMD ["bun", "run", "dist/index.js"]
+# Access applications
+# Web: http://localhost:3000
+# API: http://localhost:3001
 ```
 
-### Example Dockerfile for Web:
+### Docker Documentation
 
-```dockerfile
-FROM node:20-alpine as base
+- **[DOCKER_README.md](./DOCKER_README.md)**: Complete Docker guide
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)**: Comprehensive deployment documentation
+- **[Makefile](./Makefile)**: Convenient Docker commands
 
-FROM base as deps
-WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+### Docker Services
 
-FROM base as builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN corepack enable pnpm && pnpm run build
+- **web**: Next.js application (Node.js 20 Alpine)
+- **api**: Bun + Hono API with Playwright support
+- **postgres**: PostgreSQL 16 database
+- **redis**: Redis 7 cache and session store
+- **worker**: Background job processor (optional)
 
-FROM base as runner
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-EXPOSE 3000
-CMD ["node", "server.js"]
+### Environment Templates
+
+```bash
+# Production
+cp .env.production.example .env.production
+
+# Staging
+cp .env.staging.example .env.staging
 ```
+
+### CI/CD Pipeline
+
+The GitHub Actions workflow includes:
+- Code quality checks and security scanning
+- Multi-stage Docker builds with caching
+- Automated testing and integration tests
+- Staging and production deployments
+- Health monitoring and notifications
+
+### Kubernetes Support
+
+Complete Kubernetes manifests are provided in `k8s/deployment.yml` with:
+- Deployments, Services, and Ingress
+- Horizontal Pod Autoscaling
+- Persistent volumes for data
+- Security contexts and resource limits
+- Health checks and monitoring
 
 ## 🔧 Troubleshooting
 
