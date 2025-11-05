@@ -1,0 +1,30 @@
+{
+  "name": "monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo with Prisma ORM and Redis caching",
+  "scripts": {
+    "db:migrate": "pnpm --filter @repo/db prisma migrate dev",
+    "db:migrate:deploy": "pnpm --filter @repo/db prisma migrate deploy",
+    "db:migrate:reset": "pnpm --filter @repo/db prisma migrate reset",
+    "db:seed": "pnpm --filter @repo/db seed",
+    "db:studio": "pnpm --filter @repo/db prisma studio",
+    "db:generate": "pnpm --filter @repo/db prisma generate",
+    "db:push": "pnpm --filter @repo/db prisma db push",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:restart": "docker compose restart",
+    "docker:logs": "docker compose logs -f",
+    "docker:clean": "docker compose down -v",
+    "test:db": "cd apps/api && bun run src/index.ts",
+    "test:redis": "cd packages/db && bun run src/test-redis-simple.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
