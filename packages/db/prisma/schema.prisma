@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  name      String?
+  avatar    String?
+  bio       String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notes      Note[]
+  comments   Comment[]
+  statistics UserStatistics?
+
+  @@index([email])
+  @@index([username])
+  @@map("users")
+}
+
+model UserStatistics {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  followerCount  Int      @default(0)
+  followingCount Int      @default(0)
+  noteCount      Int      @default(0)
+  likeCount      Int      @default(0)
+  collectCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([followerCount])
+  @@index([noteCount])
+  @@map("user_statistics")
+}
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  slug        String   @unique
+  published   Boolean  @default(false)
+  authorId    String
+  tags        String[]
+  metadata    Json?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author     User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  statistics NoteStatistics?
+  media      NoteMedia[]
+  comments   Comment[]
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([published])
+  @@index([publishedAt])
+  @@index([createdAt])
+  @@map("notes")
+}
+
+model NoteStatistics {
+  id           String   @id @default(cuid())
+  noteId       String   @unique
+  viewCount    Int      @default(0)
+  likeCount    Int      @default(0)
+  shareCount   Int      @default(0)
+  commentCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([viewCount])
+  @@index([likeCount])
+  @@map("note_statistics")
+}
+
+model NoteMedia {
+  id        String   @id @default(cuid())
+  noteId    String
+  url       String
+  type      String
+  mimeType  String?
+  size      Int?
+  width     Int?
+  height    Int?
+  alt       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId])
+  @@index([type])
+  @@map("note_media")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  noteId    String
+  authorId  String
+  parentId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note   Note      @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+
+  @@index([noteId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model CrawlerJob {
+  id          String   @id @default(cuid())
+  url         String
+  status      String   @default("pending")
+  priority    Int      @default(0)
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  error       String?  @db.Text
+  result      Json?
+  metadata    Json?
+  scheduledAt DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("crawler_jobs")
+}
+
+model QueryLog {
+  id        String   @id @default(cuid())
+  query     String   @db.Text
+  params    Json?
+  duration  Int
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([duration])
+  @@map("query_logs")
+}
